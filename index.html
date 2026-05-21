@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>中译英逐句练习</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-light: #818cf8;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #1e293b;
+    --text-secondary: #64748b;
+    --border: #e2e8f0;
+    --success: #22c55e;
+    --warning: #f59e0b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+    line-height: 1.6;
+  }
+
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 16px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+
+  .header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+
+  .btn-reset {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-reset:hover { background: #f1f5f9; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 20px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--card);
+    color: var(--primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .panel textarea {
+    width: 100%;
+    min-height: 150px;
+    padding: 14px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 15px;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: border 0.2s;
+  }
+
+  .panel textarea:focus {
+    border-color: var(--primary-light);
+  }
+
+  .panel textarea::placeholder {
+    color: #94a3b8;
+  }
+
+  .panel label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    margin-top: 16px;
+    color: var(--text);
+  }
+
+  .panel label:first-child { margin-top: 0; }
+
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 16px;
+    transition: background 0.2s;
+  }
+
+  .btn-primary:hover { background: #4338ca; }
+  .btn-primary:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    padding: 12px 24px;
+    background: var(--card);
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary:hover { background: #eef2ff; }
+
+  /* Practice Area */
+  .practice { display: none; flex-direction: column; flex: 1; }
+  .practice.active { display: flex; }
+
+  .progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .progress-track {
+    flex: 1;
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    margin: 0 12px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .sentence-display {
+    background: var(--card);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 20px;
+    margin-bottom: 16px;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sentence-display p {
+    font-size: 22px;
+    line-height: 1.7;
+    text-align: center;
+    word-break: break-word;
+  }
+
+  .word-hint-area {
+    margin-bottom: 16px;
+  }
+
+  .word-hint-area .hint-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .word-hint-area .hint-header span {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .word-hint-area .hint-btn {
+    padding: 6px 16px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    color: #0369a1;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .word-hint-area .hint-btn:hover { background: #e0f2fe; }
+
+  .word-hint-area .hint-result {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #92400e;
+    min-height: 20px;
+    margin-top: 8px;
+    display: none;
+  }
+
+  .word-hint-area .hint-result.show {
+    display: block;
+    animation: fadeIn 0.2s;
+  }
+
+  .input-area textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 14px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 15px;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+    transition: border 0.2s;
+  }
+
+  .input-area textarea:focus { border-color: var(--primary-light); }
+
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .action-buttons .btn-secondary { flex: 1; text-align: center; }
+
+  .btn-answer {
+    padding: 12px 24px;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    flex: 1;
+    transition: background 0.2s;
+  }
+
+  .btn-answer:hover { background: #16a34a; }
+
+  .answer-reveal {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-top: 12px;
+    font-size: 15px;
+    color: #166534;
+    display: none;
+    animation: fadeIn 0.3s;
+  }
+
+  .answer-reveal.show { display: block; }
+
+  .nav-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: auto;
+    padding: 20px 0;
+  }
+
+  .nav-buttons button {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-prev {
+    background: #f1f5f9;
+    color: var(--text);
+  }
+
+  .btn-prev:hover { background: #e2e8f0; }
+  .btn-prev:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-next {
+    background: var(--primary);
+    color: white;
+  }
+
+  .btn-next:hover { background: #4338ca; }
+  .btn-next:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Loading */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+  }
+
+  .loading.show { display: block; }
+
+  .spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e2e8f0;
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+  }
+
+  .empty-state p { font-size: 14px; margin-top: 8px; }
+
+  /* Animations */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .toast.show { opacity: 1; }
+
+  .btn-back {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 0;
+    margin-bottom: 12px;
+  }
+
+  .btn-back:hover { text-decoration: underline; }
+
+  .mode-badge {
+    display: inline-block;
+    background: #eef2ff;
+    color: var(--primary);
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<div class="container" id="app">
+  <!-- Header -->
+  <div class="header">
+    <h1>中译英练习</h1>
+    <button class="btn-reset" id="resetBtn">重置</button>
+  </div>
+
+  <!-- Setup Panel -->
+  <div id="setupPanel">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="mode1">智能翻译</button>
+      <button class="tab" data-tab="mode2">自主导入</button>
+    </div>
+
+    <!-- Mode 1: Smart Translation -->
+    <div class="panel active" id="panelMode1">
+      <label for="chineseInput">粘贴中文文本</label>
+      <textarea id="chineseInput" placeholder="在此粘贴要翻译的中文文本…"></textarea>
+      <button class="btn-primary" id="translateBtn">翻译并开始练习</button>
+      <div class="loading" id="translateLoading">
+        <span class="spinner"></span>正在翻译…
+      </div>
+      <div class="empty-state" id="translateEmpty">
+        <p>翻译结果将按句子拆分并生成对照</p>
+      </div>
+    </div>
+
+    <!-- Mode 2: Self Import -->
+    <div class="panel" id="panelMode2">
+      <label for="chineseOriginal">中文原文</label>
+      <textarea id="chineseOriginal" placeholder="在此粘贴中文原文…"></textarea>
+      <label for="englishTranslation">对应的英文译文</label>
+      <textarea id="englishTranslation" placeholder="在此粘贴对应的英文译文…"></textarea>
+      <button class="btn-primary" id="importBtn">导入并开始练习</button>
+    </div>
+  </div>
+
+  <!-- Practice Area -->
+  <div class="practice" id="practiceArea">
+    <button class="btn-back" id="backBtn">← 返回设置</button>
+
+    <div class="progress-bar">
+      <span id="progressLabel">1/10</span>
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill" style="width:10%"></div>
+      </div>
+      <span class="mode-badge" id="modeBadge">智能翻译</span>
+    </div>
+
+    <div class="sentence-display">
+      <p id="chineseSentence">中文句子</p>
+    </div>
+
+    <div class="word-hint-area">
+      <div class="hint-header">
+        <span>点击下方任意词语查看英文提示</span>
+        <button class="hint-btn" id="hintToggleBtn">选中单词</button>
+      </div>
+      <div id="wordChips">
+        <!-- word chips rendered here -->
+      </div>
+      <div class="hint-result" id="hintResult"></div>
+    </div>
+
+    <div class="input-area">
+      <textarea id="userInput" placeholder="在此写你的英文翻译…"></textarea>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn-secondary" id="showAnswerBtn">显示答案</button>
+    </div>
+    <div class="answer-reveal" id="answerReveal"></div>
+
+    <div class="nav-buttons">
+      <button class="btn-prev" id="prevBtn">上一句</button>
+      <button class="btn-next" id="nextBtn">下一句</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ============================================================
+  // 配置：翻译 API
+  // 默认使用 MyMemory (免费, 无需 key, 但有频率限制)
+  // 如需替换为其他 API，修改 translateSentence 函数即可
+  // ============================================================
+  const CONFIG = {
+    // MyMemory API (免费)
+    mymemory: {
+      url: 'https://api.mymemory.translated.net/get',
+      // 注册免费获得 key 后可填: ?key=your_key
+      key: ''
+    }
+  };
+
+  // ============================================================
+  // 状态
+  // ============================================================
+  let state = {
+    mode: 'mode1',           // 'mode1' | 'mode2'
+    pairs: [],               // [{chinese, english}]
+    currentIndex: 0,
+    hintVisible: false,
+    answerVisible: false,
+    userAnswers: {}          // { index: userInputText }
+  };
+
+  // 小词典 (用于单词提示的预置词库)
+  const DICT = {
+    '我': 'I / me',
+    '你': 'you',
+    '他': 'he / him',
+    '她': 'she / her',
+    '它': 'it',
+    '我们': 'we / us',
+    '他们': 'they / them',
+    '是': 'is / are / am / yes',
+    '有': 'have / has / there is',
+    '在': 'at / in / on / be +ing',
+    '会': 'will / can / able to',
+    '能': 'can / able to',
+    '要': 'want to / need to / will',
+    '去': 'go',
+    '来': 'come',
+    '看': 'see / look / watch',
+    '说': 'say / speak / talk',
+    '做': 'do / make',
+    '想': 'think / want / miss',
+    '知道': 'know',
+    '喜欢': 'like / enjoy',
+    '爱': 'love',
+    '好': 'good / well',
+    '大': 'big / large',
+    '小': 'small / little',
+    '多': 'many / much / more',
+    '少': 'few / little / less',
+    '高': 'high / tall',
+    '长': 'long',
+    '新': 'new',
+    '老': 'old',
+    '重要': 'important',
+    '美丽': 'beautiful',
+    '快乐': 'happy',
+    '难过': 'sad',
+    '努力': 'hardworking / strive',
+    '学习': 'study / learn',
+    '工作': 'work / job',
+    '朋友': 'friend',
+    '家人': 'family',
+    '时间': 'time',
+    '今天': 'today',
+    '明天': 'tomorrow',
+    '昨天': 'yesterday',
+    '早上': 'morning',
+    '下午': 'afternoon',
+    '晚上': 'evening / night',
+    '现在': 'now',
+    '什么': 'what',
+    '谁': 'who',
+    '哪里': 'where',
+    '为什么': 'why',
+    '怎么': 'how',
+    '多少': 'how many / how much',
+    '这个': 'this',
+    '那个': 'that',
+    '这些': 'these',
+    '那些': 'those',
+    '一个': 'a / an / one',
+    '很': 'very',
+    '都': 'all / both',
+    '也': 'also / too',
+    '不': 'no / not',
+    '没': 'not / without',
+    '如果': 'if',
+    '因为': 'because',
+    '所以': 'so / therefore',
+    '但是': 'but / however',
+    '而且': 'and / moreover',
+    '或者': 'or / maybe',
+    '虽然': 'although',
+    '可以': 'can / may',
+    '应该': 'should / must',
+    '需要': 'need / require',
+    '让': 'let / make / allow',
+    '给': 'give / for',
+    '用': 'use / with',
+    '找': 'look for / find',
+    '等': 'wait / etc.',
+    '叫': 'call / named',
+    '觉得': 'feel / think',
+    '吃': 'eat',
+    '喝': 'drink',
+    '走': 'walk / leave',
+    '跑': 'run',
+    '开': 'open / drive / turn on',
+    '关': 'close / turn off',
+    '写': 'write',
+    '读': 'read',
+    '听': 'listen / hear',
+    '买': 'buy',
+    '卖': 'sell',
+    '住': 'live / stay',
+    '坐': 'sit / take (transport)',
+    '站': 'stand',
+    '告诉': 'tell',
+    '帮助': 'help',
+    '谢谢': 'thank you',
+    '对不起': 'sorry',
+    '没问题': 'no problem',
+    '你好': 'hello',
+    '再见': 'goodbye',
+    '可以': 'can / okay',
+    '开始': 'start / begin',
+    '结束': 'end / finish',
+    '已经': 'already',
+    '还': 'still / also / yet',
+    '就': 'then / just / at once',
+    '更': 'more / even more',
+    '最': 'most / -est',
+    '太': 'too / extremely',
+    '每': 'every / each',
+    '第': 'prefix for ordinal numbers',
+    '为': 'for / for the sake of',
+    '从': 'from / since',
+    '对': 'to / for / correct',
+    '和': 'and / with',
+    '与': 'and / with',
+    '比': 'than / compare',
+    '被': 'by (passive voice marker)',
+    '把': '(object-fronting preposition)',
+    '的': '(possessive/attribute marker)',
+    '地': '(adverbial marker)',
+    '得': '(complement marker)',
+    '了': '(perfective/change marker)',
+    '着': '(progressive marker)',
+    '过': '(experiential marker) / pass',
+  };
+
+  // ============================================================
+  // DOM 引用
+  // ============================================================
+  const $ = id => document.getElementById(id);
+  const chineseInput = $('chineseInput');
+  const translateBtn = $('translateBtn');
+  const translateLoading = $('translateLoading');
+  const translateEmpty = $('translateEmpty');
+  const chineseOriginal = $('chineseOriginal');
+  const englishTranslation = $('englishTranslation');
+  const importBtn = $('importBtn');
+  const setupPanel = $('setupPanel');
+  const practiceArea = $('practiceArea');
+  const chineseSentence = $('chineseSentence');
+  const wordChips = $('wordChips');
+  const hintResult = $('hintResult');
+  const hintToggleBtn = $('hintToggleBtn');
+  const userInput = $('userInput');
+  const showAnswerBtn = $('showAnswerBtn');
+  const answerReveal = $('answerReveal');
+  const prevBtn = $('prevBtn');
+  const nextBtn = $('nextBtn');
+  const progressLabel = $('progressLabel');
+  const progressFill = $('progressFill');
+  const modeBadge = $('modeBadge');
+  const resetBtn = $('resetBtn');
+  const backBtn = $('backBtn');
+  const toastEl = $('toast');
+
+  // ============================================================
+  // 工具函数
+  // ============================================================
+
+  function showToast(msg, duration = 2000) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastEl._hideTimer);
+    toastEl._hideTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
+  }
+
+  // 按中英文标点拆分句子
+  function splitSentences(text) {
+    // 按 。！？；\n 拆分，保留非空句子
+    const raw = text.split(/[。！？；\n]+/).map(s => s.trim()).filter(s => s.length > 0);
+    // 如果原文本以标点结尾，最后可能多一个空字符串，已过滤
+    // 同时处理英文句号的情况（但不与中文混淆）
+    // 如果拆分结果太少，尝试按英文句点拆分
+    if (raw.length <= 1 && /[a-zA-Z]/.test(text)) {
+      const enSplit = text.split(/\.\s+/).map(s => s.trim()).filter(s => s.length > 0);
+      if (enSplit.length > 1) return enSplit;
+    }
+    return raw;
+  }
+
+  // 中文分词：使用 Intl.Segmenter + 返回词语列表
+  function segmentChinese(text) {
+    const words = [];
+    try {
+      if (Intl.Segmenter) {
+        const segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' });
+        const segments = segmenter.segment(text);
+        for (const seg of segments) {
+          const w = seg.segment.trim();
+          if (w.length > 0) words.push({ text: w, isWordLike: seg.isWordLike });
+        }
+      } else {
+        // fallback: 按汉字序列 + 非汉字序列拆分
+        const parts = text.match(/[一-鿿]+|[^一-鿿]+/g);
+        if (parts) {
+          for (const p of parts) {
+            if (/[一-鿿]/.test(p)) {
+              // 对连续汉字逐字拆分（简单处理）
+              for (const ch of p) words.push({ text: ch, isWordLike: true });
+            } else {
+              words.push({ text: p, isWordLike: false });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // 极端 fallback
+      for (const ch of text) words.push({ text: ch, isWordLike: /[一-鿿]/.test(ch) });
+    }
+    // 过滤空白
+    return words.filter(w => w.text.trim().length > 0);
+  }
+
+  // 查询词典
+  function lookupWord(word) {
+    // 先查完整词
+    if (DICT[word]) return DICT[word];
+    // 尝试逐字
+    const results = [];
+    for (const ch of word) {
+      if (DICT[ch]) results.push(`${ch}: ${DICT[ch]}`);
+    }
+    return results.length > 0 ? results.join('；') : null;
+  }
+
+  // ============================================================
+  // 翻译 API
+  // ============================================================
+
+  async function translateSentence(text, from = 'zh-CN', to = 'en') {
+    // 使用 MyMemory API
+    const url = `${CONFIG.mymemory.url}?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`翻译 API 返回 ${resp.status}`);
+    const data = await resp.json();
+    if (data.responseStatus !== 200) {
+      throw new Error(data.responseDetails || '翻译失败');
+    }
+    return data.responseData.translatedText;
+  }
+
+  // 批量翻译（按句子依次调用）
+  async function translateBatch(sentences) {
+    const results = [];
+    for (let i = 0; i < sentences.length; i++) {
+      const s = sentences[i].trim();
+      if (!s) { results.push(''); continue; }
+      // 加延迟避免触发限流
+      if (i > 0) await new Promise(r => setTimeout(r, 300));
+      const translated = await translateSentence(s);
+      results.push(translated);
+    }
+    return results;
+  }
+
+  // ============================================================
+  // 模式切换
+  // ============================================================
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      this.classList.add('active');
+      const mode = this.dataset.tab;
+      document.getElementById('panel' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+      state.mode = mode;
+    });
+  });
+
+  // ============================================================
+  // 模式一：智能翻译
+  // ============================================================
+
+  translateBtn.addEventListener('click', async function() {
+    const text = chineseInput.value.trim();
+    if (!text) {
+      showToast('请先粘贴中文文本');
+      return;
+    }
+
+    const sentences = splitSentences(text);
+    if (sentences.length === 0) {
+      showToast('未识别到有效句子');
+      return;
+    }
+
+    translateBtn.disabled = true;
+    translateLoading.classList.add('show');
+    translateEmpty.style.display = 'none';
+
+    try {
+      const translations = await translateBatch(sentences);
+      const pairs = sentences.map((ch, i) => ({
+        chinese: ch,
+        english: translations[i] || ''
+      }));
+      startPractice(pairs, '智能翻译');
+    } catch (err) {
+      console.error(err);
+      // 如果翻译失败，使用模拟数据
+      showToast('翻译 API 调用失败，使用模拟数据演示');
+      const mockTranslations = sentences.map(s => `[Translation of: ${s}]`);
+      const pairs = sentences.map((ch, i) => ({
+        chinese: ch,
+        english: mockTranslations[i] || ''
+      }));
+      startPractice(pairs, '智能翻译 (演示模式)');
+    } finally {
+      translateBtn.disabled = false;
+      translateLoading.classList.remove('show');
+    }
+  });
+
+  // ============================================================
+  // 模式二：自主导入
+  // ============================================================
+
+  importBtn.addEventListener('click', function() {
+    const cn = chineseOriginal.value.trim();
+    const en = englishTranslation.value.trim();
+    if (!cn || !en) {
+      showToast('请同时填写中文原文和英文译文');
+      return;
+    }
+
+    const cnSentences = splitSentences(cn);
+    const enSentences = splitSentences(en);
+
+    if (cnSentences.length !== enSentences.length) {
+      showToast(`中英文句子数量不匹配：中文 ${cnSentences.length} 句，英文 ${enSentences.length} 句`);
+      return;
+    }
+
+    const pairs = cnSentences.map((ch, i) => ({
+      chinese: ch,
+      english: enSentences[i] || ''
+    }));
+    startPractice(pairs, '自主导入');
+  });
+
+  // ============================================================
+  // 开始练习
+  // ============================================================
+
+  function startPractice(pairs, modeLabel) {
+    state.pairs = pairs;
+    state.currentIndex = 0;
+    state.hintVisible = false;
+    state.answerVisible = false;
+    state.userAnswers = {};
+
+    // 尝试从 localStorage 恢复
+    const saved = loadProgress();
+    if (saved && saved.pairsHash === hashPairs(pairs)) {
+      state.currentIndex = saved.currentIndex || 0;
+      state.userAnswers = saved.userAnswers || {};
+    }
+
+    modeBadge.textContent = modeLabel;
+    setupPanel.style.display = 'none';
+    practiceArea.classList.add('active');
+    renderSentence();
+  }
+
+  function hashPairs(pairs) {
+    // 简单的哈希用于校验内容是否一致
+    let h = 0;
+    for (const p of pairs) {
+      for (const ch of (p.chinese + p.english)) {
+        h = ((h << 5) - h) + ch.charCodeAt(0);
+        h |= 0;
+      }
+    }
+    return h;
+  }
+
+  // ============================================================
+  // 渲染句子
+  // ============================================================
+
+  function renderSentence() {
+    const idx = state.currentIndex;
+    const total = state.pairs.length;
+    const pair = state.pairs[idx];
+    if (!pair) return;
+
+    // 进度
+    progressLabel.textContent = `${idx + 1}/${total}`;
+    progressFill.style.width = `${((idx + 1) / total) * 100}%`;
+
+    // 中文句子
+    chineseSentence.textContent = pair.chinese;
+
+    // 用户输入
+    userInput.value = state.userAnswers[idx] || '';
+    answerReveal.classList.remove('show');
+    state.answerVisible = false;
+
+    // 分词并渲染单词块
+    renderWordChips(pair.chinese);
+    hintResult.classList.remove('show');
+    state.hintVisible = false;
+
+    // 按钮状态
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === total - 1;
+
+    // 保存进度
+    saveProgress();
+  }
+
+  function renderWordChips(text) {
+    const words = segmentChinese(text);
+    wordChips.innerHTML = '';
+    words.forEach((w, i) => {
+      const span = document.createElement('span');
+      span.textContent = w.text;
+      // 只对汉字/词语添加可点击样式
+      if (/[一-鿿]/.test(w.text)) {
+        span.style.cssText = `
+          display: inline-block;
+          padding: 6px 4px;
+          margin: 3px 2px;
+          border-radius: 6px;
+          background: #f1f5f9;
+          cursor: pointer;
+          font-size: 17px;
+          transition: background 0.15s;
+          user-select: none;
+        `;
+        span.addEventListener('mouseenter', () => { span.style.background = '#e0e7ff'; });
+        span.addEventListener('mouseleave', () => { span.style.background = '#f1f5f9'; });
+        span.addEventListener('click', () => onWordClick(w.text));
+      } else {
+        // 标点/空格等不可点击
+        span.style.cssText = `
+          display: inline-block;
+          padding: 6px 2px;
+          margin: 3px 1px;
+          font-size: 17px;
+          color: var(--text-secondary);
+        `;
+      }
+      wordChips.appendChild(span);
+    });
+  }
+
+  function onWordClick(word) {
+    const meaning = lookupWord(word);
+    if (meaning) {
+      hintResult.textContent = `${word} → ${meaning}`;
+    } else {
+      hintResult.textContent = `未找到「${word}」的释义。可自行扩展 DICT 词库。`;
+    }
+    hintResult.classList.add('show');
+    state.hintVisible = true;
+  }
+
+  hintToggleBtn.addEventListener('click', () => {
+    showToast('点击上方中文句子中的词语即可查询');
+  });
+
+  // ============================================================
+  // 显示答案
+  // ============================================================
+
+  showAnswerBtn.addEventListener('click', function() {
+    const pair = state.pairs[state.currentIndex];
+    if (!pair) return;
+    answerReveal.textContent = pair.english || '(无译文)';
+    answerReveal.classList.add('show');
+    state.answerVisible = true;
+  });
+
+  // ============================================================
+  // 导航
+  // ============================================================
+
+  function goToPrev() {
+    if (state.currentIndex > 0) {
+      saveUserAnswer();
+      state.currentIndex--;
+      renderSentence();
+    }
+  }
+
+  function goToNext() {
+    if (state.currentIndex < state.pairs.length - 1) {
+      saveUserAnswer();
+      state.currentIndex++;
+      renderSentence();
+    } else {
+      showToast('已完成所有句子！');
+    }
+  }
+
+  function saveUserAnswer() {
+    const val = userInput.value.trim();
+    if (val) {
+      state.userAnswers[state.currentIndex] = val;
+    } else {
+      delete state.userAnswers[state.currentIndex];
+    }
+    saveProgress();
+  }
+
+  prevBtn.addEventListener('click', goToPrev);
+  nextBtn.addEventListener('click', goToNext);
+
+  // 键盘快捷键
+  document.addEventListener('keydown', function(e) {
+    if (!practiceArea.classList.contains('active')) return;
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goToPrev(); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); goToNext(); }
+  });
+
+  // 自动保存输入
+  let saveTimer = null;
+  userInput.addEventListener('input', function() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveUserAnswer(), 500);
+  });
+
+  // ============================================================
+  // 返回 & 重置
+  // ============================================================
+
+  backBtn.addEventListener('click', function() {
+    saveUserAnswer();
+    practiceArea.classList.remove('active');
+    setupPanel.style.display = 'block';
+  });
+
+  resetBtn.addEventListener('click', function() {
+    if (state.pairs.length > 0) {
+      if (!confirm('确定要重置吗？当前练习进度将丢失。')) return;
+    }
+    // 清除状态
+    state.pairs = [];
+    state.currentIndex = 0;
+    state.userAnswers = {};
+    state.hintVisible = false;
+    state.answerVisible = false;
+    localStorage.removeItem('translation_practice_progress');
+    practiceArea.classList.remove('active');
+    setupPanel.style.display = 'block';
+    chineseInput.value = '';
+    chineseOriginal.value = '';
+    englishTranslation.value = '';
+    userInput.value = '';
+    answerReveal.classList.remove('show');
+  });
+
+  // ============================================================
+  // localStorage 持久化
+  // ============================================================
+
+  function saveProgress() {
+    try {
+      const data = {
+        pairsHash: hashPairs(state.pairs),
+        currentIndex: state.currentIndex,
+        userAnswers: state.userAnswers,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('translation_practice_progress', JSON.stringify(data));
+    } catch (e) { /* ignore */ }
+  }
+
+  function loadProgress() {
+    try {
+      const raw = localStorage.getItem('translation_practice_progress');
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+
+  // ============================================================
+  // 初始化
+  // ============================================================
+
+  console.log('中译英逐句练习工具已加载');
+  console.log('如需使用真实翻译 API，请替换 translateSentence 函数中的接口地址');
+  console.log('推荐: MyMemory (https://api.mymemory.translated.net/get) 免费无需 key');
+
+})();
+</script>
+</body>
+</html>
