@@ -422,6 +422,64 @@
     font-size: 12px;
     font-weight: 500;
   }
+
+  /* File Upload */
+  .file-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+  }
+
+  .file-upload-area:hover {
+    border-color: var(--primary-light);
+    background: #f8faff;
+  }
+
+  .file-upload-area.dragover {
+    border-color: var(--primary);
+    background: #eef2ff;
+  }
+
+  .file-upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .file-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #166534;
+    margin-bottom: 8px;
+  }
+
+  .btn-small {
+    padding: 4px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: auto;
+  }
+
+  .btn-small:hover { background: #f1f5f9; }
+
+  .file-info span { word-break: break-all; }
 </style>
 </head>
 <body>
@@ -439,6 +497,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="mode1">智能翻译</button>
       <button class="tab" data-tab="mode2">自主导入</button>
+      <button class="tab" data-tab="mode3">翻译库</button>
     </div>
 
     <!-- Mode 1: Smart Translation -->
@@ -461,6 +520,35 @@
       <label for="englishTranslation">对应的英文译文</label>
       <textarea id="englishTranslation" placeholder="在此粘贴对应的英文译文…"></textarea>
       <button class="btn-primary" id="importBtn">导入并开始练习</button>
+    </div>
+
+    <!-- Mode 3: Translation Library -->
+    <div class="panel" id="panelMode3">
+      <label for="fileUpload">上传题库文件（JSON）</label>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
+        文件格式：JSON 数组，每项包含 <code>chinese</code> 和 <code>english</code> 字段
+      </p>
+      <div class="file-upload-area" id="fileUploadArea">
+        <input type="file" id="fileUpload" accept=".json" style="display:none">
+        <div class="file-upload-placeholder" id="fileUploadPlaceholder">
+          <span style="font-size:32px;margin-bottom:4px;opacity:0.4;">+</span>
+          <span>点击选择 JSON 文件</span>
+          <span style="font-size:12px;color:#94a3b8;">或拖拽文件到此处</span>
+        </div>
+      </div>
+      <div class="file-info" id="fileInfo" style="display:none">
+        <span id="fileName"></span>
+        <button class="btn-small" id="fileRemoveBtn">移除</button>
+      </div>
+      <button class="btn-primary" id="libraryBtn" disabled>加载题库并开始练习</button>
+      <div class="empty-state" id="libraryEmpty">
+        <p>支持的 JSON 格式：</p>
+        <pre style="text-align:left;background:#f1f5f9;padding:12px;border-radius:8px;margin-top:8px;font-size:12px;overflow-x:auto;">
+[
+  {"chinese": "你好，世界", "english": "Hello, world"},
+  {"chinese": "今天天气很好", "english": "The weather is nice today"}
+]</pre>
+      </div>
     </div>
   </div>
 
@@ -682,6 +770,14 @@
   const chineseOriginal = $('chineseOriginal');
   const englishTranslation = $('englishTranslation');
   const importBtn = $('importBtn');
+  const fileUpload = $('fileUpload');
+  const fileUploadArea = $('fileUploadArea');
+  const fileUploadPlaceholder = $('fileUploadPlaceholder');
+  const fileInfo = $('fileInfo');
+  const fileName = $('fileName');
+  const fileRemoveBtn = $('fileRemoveBtn');
+  const libraryBtn = $('libraryBtn');
+  const libraryEmpty = $('libraryEmpty');
   const setupPanel = $('setupPanel');
   const practiceArea = $('practiceArea');
   const chineseSentence = $('chineseSentence');
@@ -887,8 +983,91 @@
   });
 
   // ============================================================
-  // 开始练习
+  // 模式三：翻译库（题库）
   // ============================================================
+
+  let loadedFileData = null;
+
+  // 点击上传区域触发文件选择
+  fileUploadArea.addEventListener('click', function(e) {
+    if (e.target === fileRemoveBtn || fileRemoveBtn.contains(e.target)) return;
+    fileUpload.click();
+  });
+
+  // 拖拽支持
+  fileUploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.classList.add('dragover');
+  });
+
+  fileUploadArea.addEventListener('dragleave', function() {
+    this.classList.remove('dragover');
+  });
+
+  fileUploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.classList.remove('dragover');
+    if (e.dataTransfer.files.length > 0) {
+      fileUpload.files = e.dataTransfer.files;
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
+  });
+
+  fileUpload.addEventListener('change', function() {
+    if (this.files.length > 0) {
+      handleFileSelect(this.files[0]);
+    }
+  });
+
+  function handleFileSelect(file) {
+    if (!file.name.endsWith('.json')) {
+      showToast('请选择 JSON 文件');
+      return;
+    }
+    fileName.textContent = file.name;
+    fileInfo.style.display = 'flex';
+    fileUploadPlaceholder.style.display = 'none';
+    libraryBtn.disabled = true;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!Array.isArray(data)) throw new Error('JSON 必须是数组格式');
+        if (data.length === 0) throw new Error('题库不能为空');
+        for (let i = 0; i < data.length; i++) {
+          if (!data[i].chinese || !data[i].english) {
+            throw new Error(`第 ${i + 1} 项缺少 chinese 或 english 字段`);
+          }
+        }
+        loadedFileData = data;
+        libraryBtn.disabled = false;
+        libraryEmpty.style.display = 'none';
+        showToast(`已加载 ${data.length} 条题目`);
+      } catch (err) {
+        showToast('文件解析失败：' + err.message);
+        loadedFileData = null;
+        libraryBtn.disabled = true;
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  fileRemoveBtn.addEventListener('click', function() {
+    fileUpload.value = '';
+    fileInfo.style.display = 'none';
+    fileUploadPlaceholder.style.display = 'flex';
+    libraryBtn.disabled = true;
+    loadedFileData = null;
+  });
+
+  libraryBtn.addEventListener('click', function() {
+    if (!loadedFileData || loadedFileData.length === 0) {
+      showToast('请先上传有效的题库文件');
+      return;
+    }
+    startPractice(loadedFileData, '翻译库');
+  });
 
   function startPractice(pairs, modeLabel) {
     state.pairs = pairs;
@@ -1098,6 +1277,13 @@
     englishTranslation.value = '';
     userInput.value = '';
     answerReveal.classList.remove('show');
+    // 重置模式三
+    fileUpload.value = '';
+    fileInfo.style.display = 'none';
+    fileUploadPlaceholder.style.display = 'flex';
+    libraryBtn.disabled = true;
+    loadedFileData = null;
+    libraryEmpty.style.display = 'block';
   });
 
   // ============================================================
