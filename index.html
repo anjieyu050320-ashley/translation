@@ -557,6 +557,52 @@
     padding: 10px 12px;
     font-size: 13px;
   }
+
+  /* Chapter List */
+  .chapter-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .chapter-header .bank-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .chapter-list { margin-top: 4px; }
+  .chapter-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .chapter-item:hover {
+    border-color: var(--primary-light);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .chapter-item:active { background: #f8faff; }
+  .chapter-item-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .chapter-item-count {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .chapter-item-arrow {
+    color: var(--text-secondary);
+    font-size: 18px;
+    margin-left: 8px;
+  }
 </style>
 </head>
 <body>
@@ -616,6 +662,15 @@
             <button class="btn-secondary" id="importDocxBtn">导入 Word</button>
           </div>
         </div>
+      </div>
+
+      <!-- Chapter list -->
+      <div id="chapterListView" style="display:none">
+        <button class="btn-back" id="backFromChaptersBtn">← 返回题库列表</button>
+        <div class="chapter-header">
+          <span class="bank-name" id="chapterBankName"></span>
+        </div>
+        <div class="chapter-list" id="chapterList"></div>
       </div>
 
       <!-- Import JSON panel -->
@@ -750,7 +805,8 @@
     currentIndex: 0,
     hintVisible: false,
     answerVisible: false,
-    userAnswers: {}          // { index: userInputText }
+    userAnswers: {},         // { index: userInputText }
+    practiceSource: null,    // null | 'mode1' | 'mode2' | { bankId, chapterIndex }
   };
 
   // 小词典 (用于单词提示的预置词库)
@@ -901,6 +957,11 @@
   const bankEmpty = $('bankEmpty');
   const importJsonBtn = $('importJsonBtn');
   const importDocxBtn = $('importDocxBtn');
+  // Mode 3 - Chapter list
+  const chapterListView = $('chapterListView');
+  const chapterList = $('chapterList');
+  const chapterBankName = $('chapterBankName');
+  const backFromChaptersBtn = $('backFromChaptersBtn');
   // Mode 3 - JSON import
   const importJsonView = $('importJsonView');
   const backFromJsonBtn = $('backFromJsonBtn');
@@ -1086,6 +1147,7 @@
       if (mode === 'mode3') {
         importJsonView.style.display = 'none';
         importDocxView.style.display = 'none';
+        chapterListView.style.display = 'none';
         bankListView.style.display = 'block';
         renderBankList();
       }
@@ -1178,6 +1240,23 @@
     localStorage.setItem('translation_banks', JSON.stringify(banks));
   }
 
+  function ensureMigrated(bank) {
+    // 兼容旧数据：将 flat pairs 转为 chapters
+    if (bank.pairs && !bank.chapters) {
+      bank.chapters = [{ title: '默认篇章', content: bank.pairs }];
+      delete bank.pairs;
+    }
+    return bank;
+  }
+
+  function getTotalSentenceCount(bank) {
+    let total = 0;
+    for (const ch of (bank.chapters || [])) {
+      total += (ch.content || []).length;
+    }
+    return total;
+  }
+
   function renderBankList() {
     const banks = loadBanks();
     bankList.innerHTML = '';
@@ -1187,15 +1266,18 @@
     }
     bankEmpty.remove();
     banks.forEach((bank, i) => {
+      ensureMigrated(bank);
+      const chapters = bank.chapters || [];
+      const totalSentences = getTotalSentenceCount(bank);
       const div = document.createElement('div');
       div.className = 'bank-item';
       div.innerHTML = `
         <div class="bank-item-header">
           <span class="bank-item-name">${escapeHtml(bank.name)}</span>
-          <span class="bank-item-meta">${bank.pairs.length} 题</span>
+          <span class="bank-item-meta">${chapters.length} 篇 / ${totalSentences} 句</span>
         </div>
         <div class="bank-item-actions">
-          <button class="bank-start" data-index="${i}">开始练习</button>
+          <button class="bank-start" data-index="${i}">查看篇章</button>
           <button class="bank-rename" data-index="${i}">重命名</button>
           <button class="bank-export" data-index="${i}">导出 JSON</button>
           <button class="bank-delete" data-index="${i}">删除</button>
@@ -1215,11 +1297,12 @@
     const idx = parseInt(e.target.dataset.index, 10);
     if (isNaN(idx)) return;
     const banks = loadBanks();
-    const bank = banks[idx];
+    const bank = ensureMigrated(banks[idx]);
     if (!bank) return;
 
     if (e.target.classList.contains('bank-start')) {
-      startPractice(bank.pairs, bank.name);
+      // 显示篇章列表
+      showChapterList(idx);
     } else if (e.target.classList.contains('bank-delete')) {
       if (!confirm(`确定删除题库「${bank.name}」？`)) return;
       banks.splice(idx, 1);
@@ -1234,7 +1317,9 @@
         renderBankList();
       }
     } else if (e.target.classList.contains('bank-export')) {
-      const json = JSON.stringify(bank.pairs, null, 2);
+      // 导出所有篇章的句子对（展平）
+      const allPairs = (bank.chapters || []).reduce((acc, ch) => acc.concat(ch.content), []);
+      const json = JSON.stringify(allPairs, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1244,6 +1329,52 @@
       URL.revokeObjectURL(url);
       showToast('导出成功');
     }
+  });
+
+  // ============================================================
+  // 篇章列表
+  // ============================================================
+
+  function showChapterList(bankIndex) {
+    const banks = loadBanks();
+    const bank = ensureMigrated(banks[bankIndex]);
+    if (!bank) return;
+    bankListView.style.display = 'none';
+    chapterListView.style.display = 'block';
+    chapterBankName.textContent = bank.name;
+    renderChapterList(bankIndex, bank);
+    state._activeBankIndex = bankIndex;
+  }
+
+  function renderChapterList(bankIndex, bank) {
+    chapterList.innerHTML = '';
+    const chapters = bank.chapters || [];
+    if (chapters.length === 0) {
+      chapterList.innerHTML = '<div class="empty-state"><p>该题库暂无篇章</p></div>';
+      return;
+    }
+    chapters.forEach((ch, i) => {
+      const div = document.createElement('div');
+      div.className = 'chapter-item';
+      div.innerHTML = `
+        <div>
+          <div class="chapter-item-title">${escapeHtml(ch.title)}</div>
+          <div class="chapter-item-count">${ch.content.length} 个句子对</div>
+        </div>
+        <span class="chapter-item-arrow">›</span>`;
+      div.addEventListener('click', function() {
+        // 进入逐句练习
+        state.practiceSource = { bankId: bank.id || bankIndex, chapterIndex: i };
+        startPractice(ch.content, bank.name + ' · ' + ch.title);
+      });
+      chapterList.appendChild(div);
+    });
+  }
+
+  backFromChaptersBtn.addEventListener('click', function() {
+    chapterListView.style.display = 'none';
+    bankListView.style.display = 'block';
+    state._activeBankIndex = null;
   });
 
   // ============================================================
@@ -1344,7 +1475,12 @@
     const name = jsonBankName.value.trim();
     if (!name) { showToast('请输入题库名称'); return; }
     const banks = loadBanks();
-    banks.push({ id: Date.now().toString(36), name, pairs: jsonDataCache, createdAt: Date.now() });
+    banks.push({
+      id: Date.now().toString(36),
+      name,
+      chapters: [{ title: '默认篇章', content: jsonDataCache }],
+      createdAt: Date.now()
+    });
     saveBanks(banks);
     showToast(`题库「${name}」已保存（${jsonDataCache.length} 题）`);
     resetJsonImport();
@@ -1419,33 +1555,23 @@
         const arrayBuffer = e.target.result;
         const result = await mammoth.extractRawText({ arrayBuffer });
         const fullText = result.value;
-        const pairs = parseDocxPairs(fullText);
+        const chapters = parseDocxChapters(fullText);
 
-        if (pairs.length === 0) {
+        if (chapters.length === 0) {
           throw new Error('未找到「【中文原文】」和「【英文翻译】」标记，请检查文档格式');
         }
+        const totalPairs = chapters.reduce((s, c) => s + c.content.length, 0);
 
         docxFileName.textContent = file.name;
         docxFileInfo.style.display = 'flex';
         docxPreviewArea.style.display = 'block';
         docxSaveBtn.style.display = 'block';
-        docxItemCount.textContent = `共 ${pairs.length} 篇翻译练习`;
+        docxItemCount.textContent = `共 ${chapters.length} 篇 / ${totalPairs} 个句子对`;
         if (!docxBankName.value) {
           docxBankName.value = file.name.replace(/\.docx$/i, '');
         }
 
-        // 临时缓存
-        const banks = loadBanks();
-        // 先检查是否已存在同名题库
-        const existingName = file.name.replace(/\.docx$/i, '');
-        let cacheKey;
-        if (!banks.find(b => b.name === existingName)) {
-          cacheKey = existingName;
-        } else {
-          cacheKey = existingName + '_' + Date.now().toString(36);
-        }
-        // Store in a temp global
-        window._docxPairs = pairs;
+        window._docxChapters = chapters;
         showToast(`已解析 ${pairs.length} 篇翻译`);
       } catch (err) {
         showToast('解析失败：' + err.message);
@@ -1456,29 +1582,37 @@
     reader.readAsArrayBuffer(file);
   }
 
-  // 解析 docx 文本，提取 【中文原文】...【英文翻译】 对
-  function parseDocxPairs(text) {
-    const pairs = [];
-    // 按行处理
+  // 解析 docx 文本，提取带标题的篇章数组
+  function parseDocxChapters(text) {
+    const chapters = [];
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+    let currentTitle = '';
     let currentCn = [];
     let currentEn = [];
     let inCn = false;
     let inEn = false;
+    // 用于检测标题：在 【中文原文】 之前的非空行可能是标题
+    let lastLineBeforeCn = '';
 
     for (const line of lines) {
+      // 检测篇章标题（如 "第一篇  中秋节"、"第二篇  丝绸之路"）
+      const titleMatch = line.match(/^第[一二三四五六七八九十百千\d]+篇\s*\S+/);
+      if (titleMatch) {
+        lastLineBeforeCn = line;
+      }
+
       if (line.includes('【中文原文】')) {
-        // 如果有上一个英文内容，保存
+        // 保存上一个篇章
         if (currentCn.length > 0 || currentEn.length > 0) {
-          const cn = currentCn.join('\n').trim();
-          const en = currentEn.join('\n').trim();
-          if (cn && en) pairs.push({ chinese: cn, english: en });
+          finishChapter();
         }
+        currentTitle = lastLineBeforeCn || '';
         currentCn = [];
         currentEn = [];
         inCn = true;
         inEn = false;
-        // 提取标记后的文字
+        lastLineBeforeCn = '';
         const after = line.split('【中文原文】').pop().trim();
         if (after) currentCn.push(after);
       } else if (line.includes('【英文翻译】')) {
@@ -1487,36 +1621,66 @@
         const after = line.split('【英文翻译】').pop().trim();
         if (after) currentEn.push(after);
       } else if (inCn) {
-        currentCn.push(line);
+        // 跳过考频等信息
+        if (!line.startsWith('考频') && !line.startsWith('整理自')) {
+          currentCn.push(line);
+        }
       } else if (inEn) {
         currentEn.push(line);
+      } else {
+        lastLineBeforeCn = line;
       }
     }
     // 保存最后一对
     if (currentCn.length > 0 || currentEn.length > 0) {
-      const cn = currentCn.join('\n').trim();
-      const en = currentEn.join('\n').trim();
-      if (cn && en) pairs.push({ chinese: cn, english: en });
+      finishChapter();
     }
-    return pairs;
+
+    function finishChapter() {
+      const cnText = currentCn.join('\n').trim();
+      const enText = currentEn.join('\n').trim();
+      if (cnText && enText) {
+        // 将整篇内容按句号拆分为多个句子对（便于逐句练习）
+        const cnSentences = splitSentences(cnText);
+        const enSentences = splitSentences(enText);
+        const content = [];
+        const maxLen = Math.max(cnSentences.length, enSentences.length);
+        for (let i = 0; i < maxLen; i++) {
+          const cn = cnSentences[i] || '';
+          const en = enSentences[i] || '';
+          if (cn && en) content.push({ chinese: cn, english: en });
+        }
+        // 如果拆不了句子，保留整段
+        if (content.length === 0) {
+          content.push({ chinese: cnText, english: enText });
+        }
+        chapters.push({
+          title: currentTitle || ('篇章 ' + (chapters.length + 1)),
+          content: content
+        });
+      }
+    }
+
+    return chapters;
   }
 
   docxFileRemoveBtn.addEventListener('click', function() {
     resetDocxImport();
-    window._docxPairs = null;
+    window._docxChapters = null;
   });
 
   docxSaveBtn.addEventListener('click', function() {
-    const pairs = window._docxPairs;
-    if (!pairs || pairs.length === 0) { showToast('请先上传有效文档'); return; }
+    const chapters = window._docxChapters;
+    if (!chapters || chapters.length === 0) { showToast('请先上传有效文档'); return; }
     const name = docxBankName.value.trim();
     if (!name) { showToast('请输入题库名称'); return; }
     const banks = loadBanks();
-    banks.push({ id: Date.now().toString(36), name, pairs, createdAt: Date.now() });
+    const totalPairs = chapters.reduce((s, c) => s + c.content.length, 0);
+    banks.push({ id: Date.now().toString(36), name, chapters, createdAt: Date.now() });
     saveBanks(banks);
-    showToast(`题库「${name}」已保存（${pairs.length} 篇）`);
+    showToast(`题库「${name}」已保存（${chapters.length} 篇 / ${totalPairs} 题）`);
     resetDocxImport();
-    window._docxPairs = null;
+    window._docxChapters = null;
     importDocxView.style.display = 'none';
     bankListView.style.display = 'block';
     renderBankList();
@@ -1533,11 +1697,16 @@
     state.answerVisible = false;
     state.userAnswers = {};
 
-    // 尝试从 localStorage 恢复
-    const saved = loadProgress();
-    if (saved && saved.pairsHash === hashPairs(pairs)) {
-      state.currentIndex = saved.currentIndex || 0;
-      state.userAnswers = saved.userAnswers || {};
+    // 尝试从 localStorage 恢复进度
+    const saved = typeof state.practiceSource === 'object' && state.practiceSource
+      ? loadChapterProgress(state.practiceSource)
+      : loadProgress();
+    if (saved) {
+      // 简单校验内容一致性
+      if (saved.sentenceCount === pairs.length) {
+        state.currentIndex = saved.currentIndex || 0;
+        state.userAnswers = saved.userAnswers || {};
+      }
     }
 
     modeBadge.textContent = modeLabel;
@@ -1715,7 +1884,21 @@
   backBtn.addEventListener('click', function() {
     saveUserAnswer();
     practiceArea.classList.remove('active');
-    setupPanel.style.display = 'block';
+    // 如果是从题库篇章进入的练习，返回篇章列表
+    if (state.practiceSource && typeof state.practiceSource === 'object') {
+      setupPanel.style.display = 'block';
+      bankListView.style.display = 'none';
+      chapterListView.style.display = 'block';
+      // 刷新篇章列表
+      const banks = loadBanks();
+      const idx = state._activeBankIndex;
+      if (idx !== undefined && banks[idx]) {
+        renderChapterList(idx, ensureMigrated(banks[idx]));
+      }
+    } else {
+      setupPanel.style.display = 'block';
+    }
+    state.practiceSource = null;
   });
 
   resetBtn.addEventListener('click', function() {
@@ -1728,6 +1911,7 @@
     state.userAnswers = {};
     state.hintVisible = false;
     state.answerVisible = false;
+    state.practiceSource = null;
     localStorage.removeItem('translation_practice_progress');
     practiceArea.classList.remove('active');
     setupPanel.style.display = 'block';
@@ -1739,9 +1923,10 @@
     // 重置模式三
     resetJsonImport();
     resetDocxImport();
-    window._docxPairs = null;
+    window._docxChapters = null;
     importJsonView.style.display = 'none';
     importDocxView.style.display = 'none';
+    chapterListView.style.display = 'none';
     bankListView.style.display = 'block';
     renderBankList();
   });
@@ -1752,13 +1937,25 @@
 
   function saveProgress() {
     try {
-      const data = {
-        pairsHash: hashPairs(state.pairs),
-        currentIndex: state.currentIndex,
-        userAnswers: state.userAnswers,
-        timestamp: Date.now()
-      };
-      localStorage.setItem('translation_practice_progress', JSON.stringify(data));
+      // 如果是题库篇章练习，保存到独立 key
+      if (state.practiceSource && typeof state.practiceSource === 'object') {
+        const key = 'progress_' + state.practiceSource.bankId + '_' + state.practiceSource.chapterIndex;
+        const data = {
+          sentenceCount: state.pairs.length,
+          currentIndex: state.currentIndex,
+          userAnswers: state.userAnswers,
+          timestamp: Date.now()
+        };
+        localStorage.setItem(key, JSON.stringify(data));
+      } else {
+        const data = {
+          pairsHash: hashPairs(state.pairs),
+          currentIndex: state.currentIndex,
+          userAnswers: state.userAnswers,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('translation_practice_progress', JSON.stringify(data));
+      }
     } catch (e) { /* ignore */ }
   }
 
@@ -1767,6 +1964,14 @@
       const raw = localStorage.getItem('translation_practice_progress');
       if (!raw) return null;
       return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+
+  function loadChapterProgress(source) {
+    try {
+      const key = 'progress_' + source.bankId + '_' + source.chapterIndex;
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
     } catch (e) { return null; }
   }
 
