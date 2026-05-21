@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>中译英逐句练习</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
 <style>
   :root {
     --primary: #4f46e5;
@@ -480,6 +481,82 @@
   .btn-small:hover { background: #f1f5f9; }
 
   .file-info span { word-break: break-all; }
+
+  /* Bank List */
+  .bank-list { margin-top: 8px; }
+  .bank-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    transition: box-shadow 0.2s;
+  }
+  .bank-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .bank-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .bank-item-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .bank-item-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .bank-item-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+  .bank-item-actions button {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    background: white;
+    color: var(--text);
+    transition: all 0.15s;
+  }
+  .bank-item-actions .bank-start {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  .bank-item-actions .bank-start:hover { background: #4338ca; }
+  .bank-item-actions .bank-rename:hover { background: #f1f5f9; }
+  .bank-item-actions .bank-delete { color: #ef4444; }
+  .bank-item-actions .bank-delete:hover { background: #fef2f2; }
+  .bank-item-actions .bank-export:hover { background: #f1f5f9; }
+  .mode3-import-section {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .mode3-import-section .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+  .import-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .import-buttons .btn-secondary {
+    flex: 1;
+    text-align: center;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
 </style>
 </head>
 <body>
@@ -524,30 +601,78 @@
 
     <!-- Mode 3: Translation Library -->
     <div class="panel" id="panelMode3">
-      <label for="fileUpload">上传题库文件（JSON）</label>
-      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
-        文件格式：JSON 数组，每项包含 <code>chinese</code> 和 <code>english</code> 字段
-      </p>
-      <div class="file-upload-area" id="fileUploadArea">
-        <input type="file" id="fileUpload" accept=".json" style="display:none">
-        <div class="file-upload-placeholder" id="fileUploadPlaceholder">
-          <span style="font-size:32px;margin-bottom:4px;opacity:0.4;">+</span>
-          <span>点击选择 JSON 文件</span>
-          <span style="font-size:12px;color:#94a3b8;">或拖拽文件到此处</span>
+      <!-- Bank list -->
+      <div id="bankListView">
+        <label>我的题库</label>
+        <div class="bank-list" id="bankList">
+          <div class="empty-state" id="bankEmpty">
+            <p>暂无题库，点击下方按钮导入</p>
+          </div>
+        </div>
+        <div class="mode3-import-section">
+          <div class="section-title">导入题库</div>
+          <div class="import-buttons">
+            <button class="btn-secondary" id="importJsonBtn">导入 JSON</button>
+            <button class="btn-secondary" id="importDocxBtn">导入 Word</button>
+          </div>
         </div>
       </div>
-      <div class="file-info" id="fileInfo" style="display:none">
-        <span id="fileName"></span>
-        <button class="btn-small" id="fileRemoveBtn">移除</button>
+
+      <!-- Import JSON panel -->
+      <div id="importJsonView" style="display:none">
+        <button class="btn-back" id="backFromJsonBtn">← 返回题库列表</button>
+        <label>上传 JSON 题库文件</label>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
+          格式：JSON 数组，每项包含 <code>chinese</code> 和 <code>english</code> 字段
+        </p>
+        <div class="file-upload-area" id="jsonUploadArea">
+          <input type="file" id="jsonFileInput" accept=".json" style="display:none">
+          <div class="file-upload-placeholder" id="jsonUploadPlaceholder">
+            <span style="font-size:32px;margin-bottom:4px;opacity:0.4;">+</span>
+            <span>点击选择 JSON 文件</span>
+            <span style="font-size:12px;color:#94a3b8;">或拖拽文件到此处</span>
+          </div>
+        </div>
+        <div class="file-info" id="jsonFileInfo" style="display:none">
+          <span id="jsonFileName"></span>
+          <button class="btn-small" id="jsonFileRemoveBtn">移除</button>
+        </div>
+        <div id="jsonPreviewArea" style="display:none;margin-top:12px;">
+          <label>题库名称</label>
+          <input type="text" id="jsonBankName" placeholder="如：CET6 高频真题" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:10px;font-size:14px;outline:none;">
+          <p style="font-size:13px;color:var(--text-secondary);margin-top:6px;" id="jsonItemCount"></p>
+        </div>
+        <button class="btn-primary" id="jsonSaveBtn" style="display:none">保存到题库</button>
       </div>
-      <button class="btn-primary" id="libraryBtn" disabled>加载题库并开始练习</button>
-      <div class="empty-state" id="libraryEmpty">
-        <p>支持的 JSON 格式：</p>
-        <pre style="text-align:left;background:#f1f5f9;padding:12px;border-radius:8px;margin-top:8px;font-size:12px;overflow-x:auto;">
-[
-  {"chinese": "你好，世界", "english": "Hello, world"},
-  {"chinese": "今天天气很好", "english": "The weather is nice today"}
-]</pre>
+
+      <!-- Import DOCX panel -->
+      <div id="importDocxView" style="display:none">
+        <button class="btn-back" id="backFromDocxBtn">← 返回题库列表</button>
+        <label>导入 Word 文档（.docx）</label>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
+          文档需包含 <code>【中文原文】</code> 和 <code>【英文翻译】</code> 标记
+        </p>
+        <div class="file-upload-area" id="docxUploadArea">
+          <input type="file" id="docxFileInput" accept=".docx" style="display:none">
+          <div class="file-upload-placeholder" id="docxUploadPlaceholder">
+            <span style="font-size:32px;margin-bottom:4px;opacity:0.4;">+</span>
+            <span>点击选择 Word 文档</span>
+            <span style="font-size:12px;color:#94a3b8;">或拖拽文件到此处</span>
+          </div>
+        </div>
+        <div class="loading" id="docxLoading">
+          <span class="spinner"></span>正在解析文档…
+        </div>
+        <div class="file-info" id="docxFileInfo" style="display:none">
+          <span id="docxFileName"></span>
+          <button class="btn-small" id="docxFileRemoveBtn">移除</button>
+        </div>
+        <div id="docxPreviewArea" style="display:none;margin-top:12px;">
+          <label>题库名称</label>
+          <input type="text" id="docxBankName" placeholder="如：CET6 高频真题" style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:10px;font-size:14px;outline:none;">
+          <p style="font-size:13px;color:var(--text-secondary);margin-top:6px;" id="docxItemCount"></p>
+        </div>
+        <button class="btn-primary" id="docxSaveBtn" style="display:none">保存到题库</button>
       </div>
     </div>
   </div>
@@ -770,14 +895,39 @@
   const chineseOriginal = $('chineseOriginal');
   const englishTranslation = $('englishTranslation');
   const importBtn = $('importBtn');
-  const fileUpload = $('fileUpload');
-  const fileUploadArea = $('fileUploadArea');
-  const fileUploadPlaceholder = $('fileUploadPlaceholder');
-  const fileInfo = $('fileInfo');
-  const fileName = $('fileName');
-  const fileRemoveBtn = $('fileRemoveBtn');
-  const libraryBtn = $('libraryBtn');
-  const libraryEmpty = $('libraryEmpty');
+  // Mode 3 - Bank list
+  const bankListView = $('bankListView');
+  const bankList = $('bankList');
+  const bankEmpty = $('bankEmpty');
+  const importJsonBtn = $('importJsonBtn');
+  const importDocxBtn = $('importDocxBtn');
+  // Mode 3 - JSON import
+  const importJsonView = $('importJsonView');
+  const backFromJsonBtn = $('backFromJsonBtn');
+  const jsonUploadArea = $('jsonUploadArea');
+  const jsonFileInput = $('jsonFileInput');
+  const jsonUploadPlaceholder = $('jsonUploadPlaceholder');
+  const jsonFileInfo = $('jsonFileInfo');
+  const jsonFileName = $('jsonFileName');
+  const jsonFileRemoveBtn = $('jsonFileRemoveBtn');
+  const jsonPreviewArea = $('jsonPreviewArea');
+  const jsonBankName = $('jsonBankName');
+  const jsonItemCount = $('jsonItemCount');
+  const jsonSaveBtn = $('jsonSaveBtn');
+  // Mode 3 - DOCX import
+  const importDocxView = $('importDocxView');
+  const backFromDocxBtn = $('backFromDocxBtn');
+  const docxUploadArea = $('docxUploadArea');
+  const docxFileInput = $('docxFileInput');
+  const docxUploadPlaceholder = $('docxUploadPlaceholder');
+  const docxLoading = $('docxLoading');
+  const docxFileInfo = $('docxFileInfo');
+  const docxFileName = $('docxFileName');
+  const docxFileRemoveBtn = $('docxFileRemoveBtn');
+  const docxPreviewArea = $('docxPreviewArea');
+  const docxBankName = $('docxBankName');
+  const docxItemCount = $('docxItemCount');
+  const docxSaveBtn = $('docxSaveBtn');
   const setupPanel = $('setupPanel');
   const practiceArea = $('practiceArea');
   const chineseSentence = $('chineseSentence');
@@ -854,16 +1004,40 @@
     return words.filter(w => w.text.trim().length > 0);
   }
 
-  // 查询词典
-  function lookupWord(word) {
-    // 先查完整词
+  // 查询单词：优先调用 MyMemory API，失败或非汉字回退到本地词库
+  async function lookupWord(word) {
+    // 只对中文字词查词
+    if (!/[一-鿿]/.test(word)) return null;
+
+    // 1. 尝试 MyMemory API
+    try {
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=zh-CN|en`;
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.responseStatus === 200 && data.responseData) {
+          const translated = data.responseData.translatedText;
+          if (translated && translated !== word) {
+            // API 返回成功且有实际翻译结果
+            return translated;
+          }
+        }
+      }
+    } catch (e) {
+      // API 失败，静默回退
+    }
+
+    // 2. 回退到本地词库
     if (DICT[word]) return DICT[word];
-    // 尝试逐字
+
+    // 3. 尝试逐字查本地词库
     const results = [];
     for (const ch of word) {
       if (DICT[ch]) results.push(`${ch}: ${DICT[ch]}`);
     }
-    return results.length > 0 ? results.join('；') : null;
+    if (results.length > 0) return results.join('；');
+
+    return null;
   }
 
   // ============================================================
@@ -908,6 +1082,13 @@
       const mode = this.dataset.tab;
       document.getElementById('panel' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
       state.mode = mode;
+      // 切换到模式三时展示题库列表首页
+      if (mode === 'mode3') {
+        importJsonView.style.display = 'none';
+        importDocxView.style.display = 'none';
+        bankListView.style.display = 'block';
+        renderBankList();
+      }
     });
   });
 
@@ -983,51 +1164,149 @@
   });
 
   // ============================================================
-  // 模式三：翻译库（题库）
+  // 题库管理（localStorage）
   // ============================================================
 
-  let loadedFileData = null;
+  function loadBanks() {
+    try {
+      const raw = localStorage.getItem('translation_banks');
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
 
-  // 点击上传区域触发文件选择
-  fileUploadArea.addEventListener('click', function(e) {
-    if (e.target === fileRemoveBtn || fileRemoveBtn.contains(e.target)) return;
-    fileUpload.click();
+  function saveBanks(banks) {
+    localStorage.setItem('translation_banks', JSON.stringify(banks));
+  }
+
+  function renderBankList() {
+    const banks = loadBanks();
+    bankList.innerHTML = '';
+    if (banks.length === 0) {
+      bankList.appendChild(bankEmpty);
+      return;
+    }
+    bankEmpty.remove();
+    banks.forEach((bank, i) => {
+      const div = document.createElement('div');
+      div.className = 'bank-item';
+      div.innerHTML = `
+        <div class="bank-item-header">
+          <span class="bank-item-name">${escapeHtml(bank.name)}</span>
+          <span class="bank-item-meta">${bank.pairs.length} 题</span>
+        </div>
+        <div class="bank-item-actions">
+          <button class="bank-start" data-index="${i}">开始练习</button>
+          <button class="bank-rename" data-index="${i}">重命名</button>
+          <button class="bank-export" data-index="${i}">导出 JSON</button>
+          <button class="bank-delete" data-index="${i}">删除</button>
+        </div>`;
+      bankList.appendChild(div);
+    });
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // Bank list event delegation
+  bankList.addEventListener('click', function(e) {
+    const idx = parseInt(e.target.dataset.index, 10);
+    if (isNaN(idx)) return;
+    const banks = loadBanks();
+    const bank = banks[idx];
+    if (!bank) return;
+
+    if (e.target.classList.contains('bank-start')) {
+      startPractice(bank.pairs, bank.name);
+    } else if (e.target.classList.contains('bank-delete')) {
+      if (!confirm(`确定删除题库「${bank.name}」？`)) return;
+      banks.splice(idx, 1);
+      saveBanks(banks);
+      renderBankList();
+      showToast('已删除');
+    } else if (e.target.classList.contains('bank-rename')) {
+      const newName = prompt('输入新名称：', bank.name);
+      if (newName && newName.trim()) {
+        banks[idx].name = newName.trim();
+        saveBanks(banks);
+        renderBankList();
+      }
+    } else if (e.target.classList.contains('bank-export')) {
+      const json = JSON.stringify(bank.pairs, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${bank.name}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('导出成功');
+    }
   });
 
-  // 拖拽支持
-  fileUploadArea.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    this.classList.add('dragover');
+  // ============================================================
+  // 模式三：导入 JSON
+  // ============================================================
+
+  let jsonDataCache = null;
+
+  importJsonBtn.addEventListener('click', function() {
+    bankListView.style.display = 'none';
+    importJsonView.style.display = 'block';
+    importDocxView.style.display = 'none';
+    state.mode = 'mode3';
   });
 
-  fileUploadArea.addEventListener('dragleave', function() {
+  backFromJsonBtn.addEventListener('click', function() {
+    importJsonView.style.display = 'none';
+    bankListView.style.display = 'block';
+    resetJsonImport();
+  });
+
+  function resetJsonImport() {
+    jsonFileInput.value = '';
+    jsonFileInfo.style.display = 'none';
+    jsonUploadPlaceholder.style.display = 'flex';
+    jsonPreviewArea.style.display = 'none';
+    jsonSaveBtn.style.display = 'none';
+    jsonDataCache = null;
+  }
+
+  jsonUploadArea.addEventListener('click', function(e) {
+    if (e.target === jsonFileRemoveBtn || jsonFileRemoveBtn.contains(e.target)) return;
+    jsonFileInput.click();
+  });
+
+  jsonUploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault(); this.classList.add('dragover');
+  });
+  jsonUploadArea.addEventListener('dragleave', function() {
     this.classList.remove('dragover');
   });
-
-  fileUploadArea.addEventListener('drop', function(e) {
-    e.preventDefault();
-    this.classList.remove('dragover');
+  jsonUploadArea.addEventListener('drop', function(e) {
+    e.preventDefault(); this.classList.remove('dragover');
     if (e.dataTransfer.files.length > 0) {
-      fileUpload.files = e.dataTransfer.files;
-      handleFileSelect(e.dataTransfer.files[0]);
+      jsonFileInput.files = e.dataTransfer.files;
+      handleJsonFile(e.dataTransfer.files[0]);
     }
   });
 
-  fileUpload.addEventListener('change', function() {
-    if (this.files.length > 0) {
-      handleFileSelect(this.files[0]);
-    }
+  jsonFileInput.addEventListener('change', function() {
+    if (this.files.length > 0) handleJsonFile(this.files[0]);
   });
 
-  function handleFileSelect(file) {
+  function handleJsonFile(file) {
     if (!file.name.endsWith('.json')) {
       showToast('请选择 JSON 文件');
       return;
     }
-    fileName.textContent = file.name;
-    fileInfo.style.display = 'flex';
-    fileUploadPlaceholder.style.display = 'none';
-    libraryBtn.disabled = true;
+    jsonFileName.textContent = file.name;
+    jsonFileInfo.style.display = 'flex';
+    jsonUploadPlaceholder.style.display = 'none';
+    jsonPreviewArea.style.display = 'none';
+    jsonSaveBtn.style.display = 'none';
 
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -1040,34 +1319,212 @@
             throw new Error(`第 ${i + 1} 项缺少 chinese 或 english 字段`);
           }
         }
-        loadedFileData = data;
-        libraryBtn.disabled = false;
-        libraryEmpty.style.display = 'none';
-        showToast(`已加载 ${data.length} 条题目`);
+        jsonDataCache = data;
+        jsonPreviewArea.style.display = 'block';
+        jsonSaveBtn.style.display = 'block';
+        jsonItemCount.textContent = `共 ${data.length} 条句子对`;
+        if (!jsonBankName.value) {
+          jsonBankName.value = file.name.replace(/\.json$/i, '');
+        }
+        showToast(`已解析 ${data.length} 条题目`);
       } catch (err) {
-        showToast('文件解析失败：' + err.message);
-        loadedFileData = null;
-        libraryBtn.disabled = true;
+        showToast('解析失败：' + err.message);
+        jsonDataCache = null;
       }
     };
     reader.readAsText(file);
   }
 
-  fileRemoveBtn.addEventListener('click', function() {
-    fileUpload.value = '';
-    fileInfo.style.display = 'none';
-    fileUploadPlaceholder.style.display = 'flex';
-    libraryBtn.disabled = true;
-    loadedFileData = null;
+  jsonFileRemoveBtn.addEventListener('click', function() {
+    resetJsonImport();
   });
 
-  libraryBtn.addEventListener('click', function() {
-    if (!loadedFileData || loadedFileData.length === 0) {
-      showToast('请先上传有效的题库文件');
+  jsonSaveBtn.addEventListener('click', function() {
+    if (!jsonDataCache) { showToast('请先上传有效文件'); return; }
+    const name = jsonBankName.value.trim();
+    if (!name) { showToast('请输入题库名称'); return; }
+    const banks = loadBanks();
+    banks.push({ id: Date.now().toString(36), name, pairs: jsonDataCache, createdAt: Date.now() });
+    saveBanks(banks);
+    showToast(`题库「${name}」已保存（${jsonDataCache.length} 题）`);
+    resetJsonImport();
+    importJsonView.style.display = 'none';
+    bankListView.style.display = 'block';
+    renderBankList();
+  });
+
+  // ============================================================
+  // 模式三：导入 Word 文档
+  // ============================================================
+
+  importDocxBtn.addEventListener('click', function() {
+    bankListView.style.display = 'none';
+    importDocxView.style.display = 'block';
+    importJsonView.style.display = 'none';
+    state.mode = 'mode3';
+  });
+
+  backFromDocxBtn.addEventListener('click', function() {
+    importDocxView.style.display = 'none';
+    bankListView.style.display = 'block';
+    resetDocxImport();
+  });
+
+  function resetDocxImport() {
+    docxFileInput.value = '';
+    docxFileInfo.style.display = 'none';
+    docxUploadPlaceholder.style.display = 'flex';
+    docxPreviewArea.style.display = 'none';
+    docxSaveBtn.style.display = 'none';
+    docxLoading.classList.remove('show');
+  }
+
+  docxUploadArea.addEventListener('click', function(e) {
+    if (e.target === docxFileRemoveBtn || docxFileRemoveBtn.contains(e.target)) return;
+    docxFileInput.click();
+  });
+
+  docxUploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault(); this.classList.add('dragover');
+  });
+  docxUploadArea.addEventListener('dragleave', function() {
+    this.classList.remove('dragover');
+  });
+  docxUploadArea.addEventListener('drop', function(e) {
+    e.preventDefault(); this.classList.remove('dragover');
+    if (e.dataTransfer.files.length > 0) {
+      docxFileInput.files = e.dataTransfer.files;
+      handleDocxFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  docxFileInput.addEventListener('change', function() {
+    if (this.files.length > 0) handleDocxFile(this.files[0]);
+  });
+
+  function handleDocxFile(file) {
+    if (!file.name.endsWith('.docx')) {
+      showToast('请选择 .docx 文件');
       return;
     }
-    startPractice(loadedFileData, '翻译库');
+    docxLoading.classList.add('show');
+    docxUploadPlaceholder.style.display = 'none';
+    docxFileInfo.style.display = 'none';
+    docxPreviewArea.style.display = 'none';
+    docxSaveBtn.style.display = 'none';
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      try {
+        const arrayBuffer = e.target.result;
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        const fullText = result.value;
+        const pairs = parseDocxPairs(fullText);
+
+        if (pairs.length === 0) {
+          throw new Error('未找到「【中文原文】」和「【英文翻译】」标记，请检查文档格式');
+        }
+
+        docxFileName.textContent = file.name;
+        docxFileInfo.style.display = 'flex';
+        docxPreviewArea.style.display = 'block';
+        docxSaveBtn.style.display = 'block';
+        docxItemCount.textContent = `共 ${pairs.length} 篇翻译练习`;
+        if (!docxBankName.value) {
+          docxBankName.value = file.name.replace(/\.docx$/i, '');
+        }
+
+        // 临时缓存
+        const banks = loadBanks();
+        // 先检查是否已存在同名题库
+        const existingName = file.name.replace(/\.docx$/i, '');
+        let cacheKey;
+        if (!banks.find(b => b.name === existingName)) {
+          cacheKey = existingName;
+        } else {
+          cacheKey = existingName + '_' + Date.now().toString(36);
+        }
+        // Store in a temp global
+        window._docxPairs = pairs;
+        showToast(`已解析 ${pairs.length} 篇翻译`);
+      } catch (err) {
+        showToast('解析失败：' + err.message);
+        docxLoading.classList.remove('show');
+        docxUploadPlaceholder.style.display = 'flex';
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // 解析 docx 文本，提取 【中文原文】...【英文翻译】 对
+  function parseDocxPairs(text) {
+    const pairs = [];
+    // 按行处理
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    let currentCn = [];
+    let currentEn = [];
+    let inCn = false;
+    let inEn = false;
+
+    for (const line of lines) {
+      if (line.includes('【中文原文】')) {
+        // 如果有上一个英文内容，保存
+        if (currentCn.length > 0 || currentEn.length > 0) {
+          const cn = currentCn.join('\n').trim();
+          const en = currentEn.join('\n').trim();
+          if (cn && en) pairs.push({ chinese: cn, english: en });
+        }
+        currentCn = [];
+        currentEn = [];
+        inCn = true;
+        inEn = false;
+        // 提取标记后的文字
+        const after = line.split('【中文原文】').pop().trim();
+        if (after) currentCn.push(after);
+      } else if (line.includes('【英文翻译】')) {
+        inCn = false;
+        inEn = true;
+        const after = line.split('【英文翻译】').pop().trim();
+        if (after) currentEn.push(after);
+      } else if (inCn) {
+        currentCn.push(line);
+      } else if (inEn) {
+        currentEn.push(line);
+      }
+    }
+    // 保存最后一对
+    if (currentCn.length > 0 || currentEn.length > 0) {
+      const cn = currentCn.join('\n').trim();
+      const en = currentEn.join('\n').trim();
+      if (cn && en) pairs.push({ chinese: cn, english: en });
+    }
+    return pairs;
+  }
+
+  docxFileRemoveBtn.addEventListener('click', function() {
+    resetDocxImport();
+    window._docxPairs = null;
   });
+
+  docxSaveBtn.addEventListener('click', function() {
+    const pairs = window._docxPairs;
+    if (!pairs || pairs.length === 0) { showToast('请先上传有效文档'); return; }
+    const name = docxBankName.value.trim();
+    if (!name) { showToast('请输入题库名称'); return; }
+    const banks = loadBanks();
+    banks.push({ id: Date.now().toString(36), name, pairs, createdAt: Date.now() });
+    saveBanks(banks);
+    showToast(`题库「${name}」已保存（${pairs.length} 篇）`);
+    resetDocxImport();
+    window._docxPairs = null;
+    importDocxView.style.display = 'none';
+    bankListView.style.display = 'block';
+    renderBankList();
+  });
+
+  // ============================================================
+  // 初始化题库列表
+  // ============================================================
 
   function startPractice(pairs, modeLabel) {
     state.pairs = pairs;
@@ -1172,14 +1629,16 @@
     });
   }
 
-  function onWordClick(word) {
-    const meaning = lookupWord(word);
+  async function onWordClick(word) {
+    hintResult.textContent = `${word} → 查询中…`;
+    hintResult.classList.add('show');
+
+    const meaning = await lookupWord(word);
     if (meaning) {
       hintResult.textContent = `${word} → ${meaning}`;
     } else {
-      hintResult.textContent = `未找到「${word}」的释义。可自行扩展 DICT 词库。`;
+      hintResult.textContent = `无法获取「${word}」的释义，请检查网络。`;
     }
-    hintResult.classList.add('show');
     state.hintVisible = true;
   }
 
@@ -1278,12 +1737,13 @@
     userInput.value = '';
     answerReveal.classList.remove('show');
     // 重置模式三
-    fileUpload.value = '';
-    fileInfo.style.display = 'none';
-    fileUploadPlaceholder.style.display = 'flex';
-    libraryBtn.disabled = true;
-    loadedFileData = null;
-    libraryEmpty.style.display = 'block';
+    resetJsonImport();
+    resetDocxImport();
+    window._docxPairs = null;
+    importJsonView.style.display = 'none';
+    importDocxView.style.display = 'none';
+    bankListView.style.display = 'block';
+    renderBankList();
   });
 
   // ============================================================
@@ -1317,6 +1777,9 @@
   console.log('中译英逐句练习工具已加载');
   console.log('如需使用真实翻译 API，请替换 translateSentence 函数中的接口地址');
   console.log('推荐: MyMemory (https://api.mymemory.translated.net/get) 免费无需 key');
+
+  // 初始化题库列表
+  renderBankList();
 
 })();
 </script>
