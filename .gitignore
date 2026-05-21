@@ -1,2 +1,4 @@
 .claude/
 ~$*.docx
+github-token
+*-token
